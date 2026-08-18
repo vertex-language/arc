@@ -23,9 +23,9 @@ func dec(t *testing.T, b ...byte) Inst {
 // direction. These are encode_test's TestRegisterOperands backwards.
 func TestKnownEncodings(t *testing.T) {
 	for _, c := range []struct {
-		in   []byte
-		sig  string
-		ops  []operand.Operand
+		in  []byte
+		sig string
+		ops []operand.Operand
 	}{
 		{[]byte{0x89, 0xc8}, "MOV r/m32, r32", []operand.Operand{reg.EAX, reg.ECX}},
 		{[]byte{0x31, 0xff}, "XOR r/m32, r32", []operand.Operand{reg.EDI, reg.EDI}},
@@ -67,14 +67,14 @@ func TestKnownEncodings(t *testing.T) {
 // encode_test's TestAddressingSpecialCases with the arrow reversed.
 func TestAddressingSpecialCases(t *testing.T) {
 	for _, c := range []struct {
-		name string
-		in   []byte
-		base reg.R32
-		hasBase bool
-		index reg.R32
-		scale uint8
+		name     string
+		in       []byte
+		base     reg.R32
+		hasBase  bool
+		index    reg.R32
+		scale    uint8
 		hasIndex bool
-		disp int32
+		disp     int32
 	}{
 		{"[eax]", []byte{0x8b, 0x00}, reg.EAX, true, 0, 0, false, 0},
 		{"[ecx]+8", []byte{0x8b, 0x41, 0x08}, reg.ECX, true, 0, 0, false, 8},
@@ -105,10 +105,10 @@ func TestAddressingSpecialCases(t *testing.T) {
 		if b, has := m.Base(); has != c.hasBase || (has && b != c.base) {
 			t.Errorf("%s: base %s,%v want %s,%v", c.name, b, has, c.base, c.hasBase)
 		}
-		if x, s, has := m.Index(); has != c.hasIndex || (has && (x != c.index || s != c.scale)) {
+		if x, s, has := m.IndexReg(); has != c.hasIndex || (has && (x != c.index || s != c.scale)) {
 			t.Errorf("%s: index %s×%d,%v want %s×%d,%v", c.name, x, s, has, c.index, c.scale, c.hasIndex)
 		}
-		if d := m.Disp(); d != c.disp {
+		if d := m.Displacement(); d != c.disp {
 			t.Errorf("%s: disp %d, want %d", c.name, d, c.disp)
 		}
 		if i.Len() != len(c.in) {

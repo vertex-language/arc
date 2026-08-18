@@ -99,15 +99,24 @@ func (m mem) seg_(s reg.Sreg) mem {
 
 // Accessors. encode/ builds ModRM and SIB from these; this package classifies
 // nothing, because the classification is the encoder's table.
+//
+// These are named apart from the builders of the same shape (Disp, Index,
+// Sym on M8..M512 in width.go) rather than overloaded onto them: a method
+// defined directly on M8 shadows a promoted method of the same name from the
+// embedded mem struct regardless of signature, so "Disp" cannot be both
+// "set the displacement and return M8" and "read the displacement back" at
+// once. Base has no builder counterpart and needs no such split; Seg already
+// followed this pattern opposite Segment, and IndexReg/Displacement/Symbol
+// follow it now too.
 
 func (m mem) Bits() int  { return int(m.width) }
 func (m mem) Err() error { return m.err }
 
-func (m mem) Base() (reg.R32, bool)  { return m.base, m.hasBase }
-func (m mem) Index() (reg.R32, uint8, bool) { return m.index, m.scale, m.hasIndex }
-func (m mem) Disp() int32            { return m.disp }
-func (m mem) Sym() (SymRef, bool)    { return m.ref, m.hasRef }
-func (m mem) Seg() (reg.Sreg, bool)  { return m.seg, m.hasSeg }
+func (m mem) Base() (reg.R32, bool)            { return m.base, m.hasBase }
+func (m mem) IndexReg() (reg.R32, uint8, bool) { return m.index, m.scale, m.hasIndex }
+func (m mem) Displacement() int32              { return m.disp }
+func (m mem) Symbol() (SymRef, bool)           { return m.ref, m.hasRef }
+func (m mem) Seg() (reg.Sreg, bool)            { return m.seg, m.hasSeg }
 
 // DefaultSeg is the segment the processor uses when no override prefix is
 // present: SS when the base is ESP or EBP, DS otherwise. An override that

@@ -9,13 +9,21 @@ import "github.com/vertex-language/arc/i386/reg"
 //
 // The interface is closed in practice: every method below is promoted from
 // the unexported mem struct, which only this package can embed.
+//
+// The accessor names here are IndexReg, Displacement and Symbol rather than
+// Index, Disp and Sym, because M8..M512 already use those three names for
+// the chained builders (Mem32(reg.EAX).Disp(8).Index(reg.ECX, 4)) and a
+// method declared directly on a type always shadows a promoted method of the
+// same name, whatever its signature. Base needs no such rename since it has
+// no builder counterpart, and Seg was already distinct from the Segment
+// builder before this interface existed.
 type Memory interface {
 	Operand
 
 	Base() (reg.R32, bool)
-	Index() (reg.R32, uint8, bool)
-	Disp() int32
-	Sym() (SymRef, bool)
+	IndexReg() (reg.R32, uint8, bool)
+	Displacement() int32
+	Symbol() (SymRef, bool)
 	Seg() (reg.Sreg, bool)
 	DefaultSeg() reg.Sreg
 	Err() error

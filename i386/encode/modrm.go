@@ -56,9 +56,9 @@ func modrm(rm operand.Operand, regField uint8, haveReg bool) (encodedRM, error) 
 	}
 
 	base, hasBase := m.Base()
-	index, scale, hasIndex := m.Index()
-	disp := m.Disp()
-	sym, hasSym := m.Sym()
+	index, scale, hasIndex := m.IndexReg()
+	disp := m.Displacement()
+	sym, hasSym := m.Symbol()
 
 	if hasSym {
 		disp = sym.Addend()
