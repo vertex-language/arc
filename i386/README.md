@@ -11,15 +11,16 @@ i386/
 ├── asm.go                 Assembler, Section, Align, Label, data emission, Emit
 ├── code.go                 Encode, Forms, Decode, Explain — forwards to isa/encode/decode
 ├── text.go                  ParseFile, ParseInst, Print, PrintInst — GAS/NASM dispatch
-├── feature.go                re-export of feature/: FeatureSet, Level, extensions, ParseFeatures
-├── operand.go                 re-export of reg/ and operand/: registers, Imm, M8…M512, Label, Ref
-├── reloc.go                    RelocKind validity table, RelocName/RelocPlatform/RelocSize
-├── reloc_elf.go                 R_386_*
-├── reloc_coff.go                 IMAGE_REL_I386_*
-├── write.go                      Serialize, WriteTo, fixup resolution, symbol-size closing
-├── write_elf.go                   ELF platform writer
-├── write_coff.go                   COFF platform writer
-├── write_flat.go                    Flat platform writer (not yet implemented)
+├── assemble.go                Assemble — text.Unit → object bytes, arc build's whole job
+├── feature.go                  re-export of feature/: FeatureSet, Level, extensions, ParseFeatures
+├── operand.go                   re-export of reg/ and operand/: registers, Imm, M8…M512, Label, Ref
+├── reloc.go                      RelocKind validity table, RelocName/RelocPlatform/RelocSize
+├── reloc_elf.go                   R_386_*
+├── reloc_coff.go                   IMAGE_REL_I386_*
+├── write.go                        Serialize, WriteTo, fixup resolution, symbol-size closing
+├── write_elf.go                     ELF platform writer
+├── write_coff.go                     COFF platform writer
+├── write_flat.go                      Flat platform writer — concatenation, no relocations
 │
 ├── feature/               Level, Feature, Set — the extension vocabulary and gating
 ├── reg/                    R8, R16, R32, Sreg, St, Mm, Xmm, Ymm, Zmm, K, Cr, Dr
@@ -28,9 +29,9 @@ i386/
 ├── encode/                 form + operands → bytes + fixups
 ├── decode/                 bytes → form + operands, and the Explain field breakdown
 └── text/
-    ├── unit.go, node.go, expr.go, inst.go, directive.go, pos.go   dialect-neutral tree
+    ├── unit.go, node.go, expr.go, inst.go, operand.go, directive.go, pos.go   dialect-neutral tree
     ├── gas/                GNU as syntax: lex.go, parse.go, print.go, directive.go, expr.go, mnemonic.go
-    └── nasm/               NASM syntax: lex.go, parse.go, print.go, directive.go, expr.go
+    └── nasm/                NASM syntax: lex.go, parse.go, print.go, directive.go, expr.go
 ```
 
 ## Subpackages
@@ -54,8 +55,8 @@ a := i386.New(i386.Flat)
 ```
 
 - **ELF** — full ET_REL relocatable objects via `objectfile/elf`, `R_386_32`/`R_386_PC32`/`R_386_GOT32` wired end to end. The wider `R_386_*` set is declared in `reloc_elf.go` for completeness; anything past those three is refused at `Serialize` with a note naming the gap, not silently miscoded.
-- **COFF** — full Win32 objects via `objectfile/coff`, targeting `IMAGE_FILE_MACHINE_I386`. `write_coff.go` applies the cdecl leading-underscore mangling Win32 expects on every defined and referenced symbol, since `objectfile/coff` itself never mangles names.
-- **Flat** — declared, not yet implemented; `Serialize` returns an explicit "not implemented yet" error rather than an empty or wrong file.
+- **COFF** — full Win32 objects via `objectfile/coff`, targeting `IMAGE_FILE_MACHINE_I386`. `write_coff.go` applies the cdecl leading-underscore mangling Win32 expects on every defined and referenced symbol, since `objectfile/coff` itself never mangles names. Of the `IMAGE_REL_I386_*` kinds declared in `reloc_coff.go`, only `DIR32`, `DIR32NB`, `REL32` and `SECREL` have an `objectfile/coff` mapping today; the rest are refused at `Serialize` the same way an unmapped ELF relocation is.
+- **Flat** — a raw concatenation of every section in creation order via `objectfile/flat`, with no header and no symbol table. `SetBaseAddress` sets the load address a boot sector or similar image starts at — the `0x7C00` in the example below. Flat binary has no relocation record and no linker to resolve one at load time, so a fixup that leaves its section — a reference to another section or to an external symbol — is refused at `Serialize`, naming the reference; only a reference to a bare `Label` already defined in the same section survives.
 
 There is no Mach-O platform and no ABI parameter — `i386.New` takes only a `Platform` and options.
 
@@ -69,6 +70,20 @@ out, err := i386.Print(u, i386.NASM)
 
 Both parse to and print from the same `text.Unit`, so a file read in one dialect can be formatted in the other.
 
+## Assembling from source
+
+```go
+u, err := i386.ParseFile("boot.s", src, i386.GAS)
+if err != nil {
+	// ...
+}
+b, err := i386.Assemble(u, i386.ELF, i386.DefaultFeatures())
+```
+
+`Assemble` is `arc build`'s whole job in one call: it walks `u` in source order, places every statement into a fresh `Assembler`'s sections exactly as the hand-built calls below would, and returns `Serialize`'s bytes — no separate translation step for a caller to get wrong.
+
+Instruction operands have no gap here: a symbolic call or memory reference carries through to `Serialize` via the usual fixups, whether it came from text or from the typed builder API. What `Assemble` does not yet do is fold a `.long` or `.fill` value that is not a plain constant — `.long . - msg` and similar section-relative or symbolic data need a fixup the same way an operand does, and that backpatch path isn't wired up yet. Such an item is refused with a specific error rather than silently miswritten.
+
 ## Registers and operands
 
 ```go
@@ -80,9 +95,9 @@ i386.Ref("puts", i386.R_386_PLT32)
 
 Re-exported from `reg/` and `operand/` so a caller never needs the second import.
 
-## Building an object
+## Building an object by hand
 
-`exit(60)` — hand-built with `Section`, `Label` and `Emit`, no text file involved:
+`exit(60)` — hand-built with `Section`, `Label` and `Emit`, no text file involved, using the same primitives `Assemble` drives internally:
 
 ```go
 package main
