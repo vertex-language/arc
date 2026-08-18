@@ -131,7 +131,7 @@ func Encode(f *isa.Form, ops []operand.Operand) (Inst, error) {
 			if !ok {
 				return Inst{}, fmt.Errorf("%w: %s expects an immediate", ErrEncode, f.Signature())
 			}
-			imms = append(imms, immField{value: int64(v), width: w})
+			imms = append(imms, immField{value: v.Int64(), width: w})
 
 		case isa.SlotRel:
 			w := 4
@@ -203,7 +203,7 @@ func Encode(f *isa.Form, ops []operand.Operand) (Inst, error) {
 		switch v := rl.op.(type) {
 		case operand.Label:
 			fx.Kind = FixupLabel
-			fx.Name = string(v)
+			fx.Name = v.String()
 		case operand.SymRef:
 			fx.Kind = FixupReloc
 			fx.Name = v.Name()

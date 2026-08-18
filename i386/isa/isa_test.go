@@ -91,7 +91,7 @@ func TestHelperNamesAreUnique(t *testing.T) {
 // The imm8 and imm32 forms of a group-1 operator are both legal for a small
 // constant. Resolve returns both; choosing is the caller's.
 func TestResolveReturnsAllCandidates(t *testing.T) {
-	ops := []operand.Operand{reg.EAX, operand.Imm(1)}
+	ops := []operand.Operand{reg.EAX, operand.NewImm(1)}
 	match, gated := Resolve("add", feature.Default(), ops)
 	if len(gated) != 0 {
 		t.Errorf("nothing should be gated at baseline, got %d", len(gated))
@@ -115,7 +115,7 @@ func TestResolveReturnsAllCandidates(t *testing.T) {
 	}
 
 	// A constant too wide for a byte drops the short form.
-	match, _ = Resolve("add", feature.Default(), []operand.Operand{reg.EAX, operand.Imm(300)})
+	match, _ = Resolve("add", feature.Default(), []operand.Operand{reg.EAX, operand.NewImm(300)})
 	for _, f := range match {
 		if f.Ops[len(f.Ops)-1].Class == Imm8S {
 			t.Error("imm8 form matched a value that does not fit")
@@ -125,7 +125,7 @@ func TestResolveReturnsAllCandidates(t *testing.T) {
 
 // A fixed operand names one register and has no field to hold another.
 func TestFixedOperands(t *testing.T) {
-	match, _ := Resolve("add", feature.Default(), []operand.Operand{reg.ECX, operand.Imm(300)})
+	match, _ := Resolve("add", feature.Default(), []operand.Operand{reg.ECX, operand.NewImm(300)})
 	for _, f := range match {
 		if f.Signature() == "ADD EAX, imm32" {
 			t.Error("the EAX short form matched ECX")
@@ -134,7 +134,7 @@ func TestFixedOperands(t *testing.T) {
 	if !EAX.Matches(reg.EAX) || EAX.Matches(reg.ECX) {
 		t.Error("EAX class matches the wrong things")
 	}
-	if !One.Matches(operand.Imm(1)) || One.Matches(operand.Imm(2)) {
+	if !One.Matches(operand.NewImm(1)) || One.Matches(operand.NewImm(2)) {
 		t.Error("One class matches the wrong things")
 	}
 }

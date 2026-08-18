@@ -165,16 +165,16 @@ func (c Class) Matches(o operand.Operand) bool {
 
 	case Imm8:
 		v, ok := o.(operand.Imm)
-		return ok && int64(v) >= -128 && int64(v) <= 255
+		return ok && v.Int64() >= -128 && v.Int64() <= 255
 	case Imm8S:
 		v, ok := o.(operand.Imm)
-		return ok && int64(v) >= -128 && int64(v) <= 127
+		return ok && v.Int64() >= -128 && v.Int64() <= 127
 	case Imm16:
 		v, ok := o.(operand.Imm)
-		return ok && int64(v) >= -32768 && int64(v) <= 65535
+		return ok && v.Int64() >= -32768 && v.Int64() <= 65535
 	case Imm32:
 		v, ok := o.(operand.Imm)
-		return ok && int64(v) >= -2147483648 && int64(v) <= 4294967295
+		return ok && v.Int64() >= -2147483648 && v.Int64() <= 4294967295
 
 	case Rel8, Rel32:
 		switch o.(type) {
@@ -197,7 +197,7 @@ func (c Class) Matches(o operand.Operand) bool {
 		return o == operand.Operand(reg.DX)
 	case One:
 		v, ok := o.(operand.Imm)
-		return ok && v == 1
+		return ok && v.Int64() == 1
 	}
 	return false
 }

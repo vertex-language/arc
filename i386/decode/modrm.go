@@ -385,7 +385,7 @@ func fixedOperand(c isa.Class) (operand.Operand, error) {
 	case isa.DX:
 		return reg.DX, nil
 	case isa.One:
-		return operand.Imm(1), nil
+		return operand.NewImm(1), nil
 	}
 	return nil, fmt.Errorf("%w: %s is not a fixed operand class", ErrDecode, c)
 }

@@ -29,10 +29,10 @@ func TestKnownEncodings(t *testing.T) {
 	}{
 		{[]byte{0x89, 0xc8}, "MOV r/m32, r32", []operand.Operand{reg.EAX, reg.ECX}},
 		{[]byte{0x31, 0xff}, "XOR r/m32, r32", []operand.Operand{reg.EDI, reg.EDI}},
-		{[]byte{0xb8, 0x3c, 0, 0, 0}, "MOV r32, imm32", []operand.Operand{reg.EAX, operand.Imm(60)}},
-		{[]byte{0xc7, 0xc0, 0x3c, 0, 0, 0}, "MOV r/m32, imm32", []operand.Operand{reg.EAX, operand.Imm(60)}},
-		{[]byte{0x83, 0xc0, 0x01}, "ADD r/m32, imm8", []operand.Operand{reg.EAX, operand.Imm(1)}},
-		{[]byte{0x05, 0x01, 0, 0, 0}, "ADD EAX, imm32", []operand.Operand{reg.EAX, operand.Imm(1)}},
+		{[]byte{0xb8, 0x3c, 0, 0, 0}, "MOV r32, imm32", []operand.Operand{reg.EAX, operand.NewImm(60)}},
+		{[]byte{0xc7, 0xc0, 0x3c, 0, 0, 0}, "MOV r/m32, imm32", []operand.Operand{reg.EAX, operand.NewImm(60)}},
+		{[]byte{0x83, 0xc0, 0x01}, "ADD r/m32, imm8", []operand.Operand{reg.EAX, operand.NewImm(1)}},
+		{[]byte{0x05, 0x01, 0, 0, 0}, "ADD EAX, imm32", []operand.Operand{reg.EAX, operand.NewImm(1)}},
 		{[]byte{0x55}, "PUSH r32", []operand.Operand{reg.EBP}},
 		{[]byte{0x5d}, "POP r32", []operand.Operand{reg.EBP}},
 		{[]byte{0x41}, "INC r32", []operand.Operand{reg.ECX}},
@@ -40,7 +40,7 @@ func TestKnownEncodings(t *testing.T) {
 		{[]byte{0xc9}, "LEAVE", nil},
 		{[]byte{0xf7, 0xd3}, "NOT r/m32", []operand.Operand{reg.EBX}},
 		{[]byte{0x0f, 0xaf, 0xc1}, "IMUL r32, r/m32", []operand.Operand{reg.EAX, reg.ECX}},
-		{[]byte{0xd1, 0xe0}, "SHL r/m32, 1", []operand.Operand{reg.EAX, operand.Imm(1)}},
+		{[]byte{0xd1, 0xe0}, "SHL r/m32, 1", []operand.Operand{reg.EAX, operand.NewImm(1)}},
 		{[]byte{0x0f, 0xc8}, "BSWAP r32", []operand.Operand{reg.EAX}},
 	} {
 		i := dec(t, c.in...)
@@ -269,7 +269,7 @@ func TestBranchDisplacement(t *testing.T) {
 	if got, ok := i.Target(0x1000); !ok || got != 0x1000 {
 		t.Errorf("Target = %#x, want %#x", got, 0x1000)
 	}
-	if i.Ops[0] != operand.Operand(operand.Imm(-5)) {
+	if i.Ops[0] != operand.Operand(operand.NewImm(-5)) {
 		t.Errorf("operand = %v, want -5", i.Ops[0])
 	}
 
@@ -281,13 +281,13 @@ func TestBranchDisplacement(t *testing.T) {
 // The sign-extended byte is a different form from the four-byte immediate,
 // and the difference is visible in the decoded value.
 func TestImmediateSignedness(t *testing.T) {
-	if got := dec(t, 0x83, 0xc0, 0xff).Ops[1]; got != operand.Operand(operand.Imm(-1)) {
+	if got := dec(t, 0x83, 0xc0, 0xff).Ops[1]; got != operand.Operand(operand.NewImm(-1)) {
 		t.Errorf("imm8s = %v, want -1", got)
 	}
-	if got := dec(t, 0xcd, 0x80).Ops[0]; got != operand.Operand(operand.Imm(0x80)) {
+	if got := dec(t, 0xcd, 0x80).Ops[0]; got != operand.Operand(operand.NewImm(0x80)) {
 		t.Errorf("imm8 = %v, want 128", got)
 	}
-	if got := dec(t, 0x05, 0xff, 0xff, 0xff, 0xff).Ops[1]; got != operand.Operand(operand.Imm(0xffffffff)) {
+	if got := dec(t, 0x05, 0xff, 0xff, 0xff, 0xff).Ops[1]; got != operand.Operand(operand.NewImm(0xffffffff)) {
 		t.Errorf("imm32 = %v, want 4294967295", got)
 	}
 }

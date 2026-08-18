@@ -38,10 +38,10 @@ func TestRegisterOperands(t *testing.T) {
 	}{
 		{"mov", "MOV r/m32, r32", []operand.Operand{reg.EAX, reg.ECX}, []byte{0x89, 0xc8}},
 		{"xor", "XOR r/m32, r32", []operand.Operand{reg.EDI, reg.EDI}, []byte{0x31, 0xff}},
-		{"mov", "MOV r32, imm32", []operand.Operand{reg.EAX, operand.Imm(60)}, []byte{0xb8, 0x3c, 0, 0, 0}},
-		{"mov", "MOV r/m32, imm32", []operand.Operand{reg.EAX, operand.Imm(60)}, []byte{0xc7, 0xc0, 0x3c, 0, 0, 0}},
-		{"add", "ADD r/m32, imm8", []operand.Operand{reg.EAX, operand.Imm(1)}, []byte{0x83, 0xc0, 0x01}},
-		{"add", "ADD EAX, imm32", []operand.Operand{reg.EAX, operand.Imm(1)}, []byte{0x05, 0x01, 0, 0, 0}},
+		{"mov", "MOV r32, imm32", []operand.Operand{reg.EAX, operand.NewImm(60)}, []byte{0xb8, 0x3c, 0, 0, 0}},
+		{"mov", "MOV r/m32, imm32", []operand.Operand{reg.EAX, operand.NewImm(60)}, []byte{0xc7, 0xc0, 0x3c, 0, 0, 0}},
+		{"add", "ADD r/m32, imm8", []operand.Operand{reg.EAX, operand.NewImm(1)}, []byte{0x83, 0xc0, 0x01}},
+		{"add", "ADD EAX, imm32", []operand.Operand{reg.EAX, operand.NewImm(1)}, []byte{0x05, 0x01, 0, 0, 0}},
 		{"push", "PUSH r32", []operand.Operand{reg.EBP}, []byte{0x55}},
 		{"pop", "POP r32", []operand.Operand{reg.EBP}, []byte{0x5d}},
 		{"inc", "INC r32", []operand.Operand{reg.ECX}, []byte{0x41}},
@@ -145,7 +145,7 @@ func TestPCRelativeFixup(t *testing.T) {
 }
 
 func TestLabelFixupIsNotARelocation(t *testing.T) {
-	i, err := Encode(form(t, "jne", "JNE rel8"), []operand.Operand{operand.Label("retry")})
+	i, err := Encode(form(t, "jne", "JNE rel8"), []operand.Operand{operand.NewLabel("retry")})
 	if err != nil {
 		t.Fatal(err)
 	}

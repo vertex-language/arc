@@ -153,7 +153,7 @@ func walk(b []byte, s feature.Set) (Inst, []Field, error) {
 				return Inst{}, nil, err
 			}
 			inst.Rel, inst.HasRel = d, true
-			inst.Ops[i] = operand.Imm(d)
+			inst.Ops[i] = operand.NewImm(int64(d))
 		}
 	}
 
@@ -309,24 +309,24 @@ func (w *walker) opcode() (m *[256][]*entry, op byte, start int, err error) {
 func (w *walker) imm(c isa.Class) (operand.Imm, error) {
 	n, err := immWidth(c)
 	if err != nil {
-		return 0, err
+		return operand.Imm{}, err
 	}
 	off := w.pos
 	raw, err := w.le(n)
 	if err != nil {
-		return 0, err
+		return operand.Imm{}, err
 	}
 
 	var v operand.Imm
 	switch {
 	case c == isa.Imm8S:
-		v = operand.Imm(int8(raw))
+		v = operand.NewImm(int64(int8(raw)))
 	case n == 1:
-		v = operand.Imm(uint8(raw))
+		v = operand.NewImm(int64(uint8(raw)))
 	case n == 2:
-		v = operand.Imm(uint16(raw))
+		v = operand.NewImm(int64(uint16(raw)))
 	default:
-		v = operand.Imm(raw)
+		v = operand.NewImm(int64(raw))
 	}
 
 	w.span(FieldImm, off, n, c.String(), v.String(), hexN(raw, n))

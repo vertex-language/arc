@@ -97,7 +97,7 @@ func TestWidthIsAType(t *testing.T) {
 // Imm, Label and SymRef have no width: an immediate takes the form's, and a
 // name has none at all.
 func TestWidthlessOperands(t *testing.T) {
-	for _, op := range []Operand{Imm(60), Label("loop"), Ref("puts", RelocKind(4))} {
+	for _, op := range []Operand{NewImm(60), NewLabel("loop"), Ref("puts", RelocKind(4))} {
 		if got := op.Bits(); got != 0 {
 			t.Errorf("%T.Bits() = %d, want 0", op, got)
 		}
