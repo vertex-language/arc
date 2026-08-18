@@ -53,12 +53,12 @@ func buildOne(path, out string, tgt target, dialect i386.Dialect) error {
 		return err
 	}
 
-	unit, err := i386.ParseFile(path, string(src), dialect)
+	unit, err := i386.ParseFile(path, src, dialect)
 	if err != nil {
 		return err
 	}
 
-	b, err := i386.Assemble(unit, tgt.platform, i386.Baseline())
+	b, err := i386.Assemble(unit, tgt.platform, i386.DefaultFeatures())
 	if err != nil {
 		return err
 	}

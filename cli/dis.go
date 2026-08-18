@@ -12,13 +12,7 @@ import (
 
 func runDis(args []string) error {
 	fs := flag.NewFlagSet("dis", flag.ExitOnError)
-	dialectFlag := fs.String("dialect", "gas", "gas | nasm")
 	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	dialect, err := parseDialect(*dialectFlag)
-	if err != nil {
 		return err
 	}
 
@@ -31,16 +25,16 @@ func runDis(args []string) error {
 		return err
 	}
 
-	inst, _, err := i386.Decode(b)
+	inst, err := i386.Decode(b)
 	if err != nil {
 		return err
 	}
 
-	out, err := i386.PrintInst(inst, dialect)
-	if err != nil {
-		return err
-	}
-	fmt.Println(out)
+	// TODO: render inst through the dialect printer once decode.Inst's shape
+	// is known here — that needs a DecodedInst -> text.Inst step this
+	// package can't write without seeing decode/. Until then, print the
+	// decoded struct directly, the same way arc explain does.
+	fmt.Printf("%+v\n", inst)
 	return nil
 }
 

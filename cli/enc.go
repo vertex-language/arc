@@ -26,7 +26,7 @@ func runEnc(args []string) error {
 		if err != nil {
 			return fmt.Errorf("%q: %w", line, err)
 		}
-		b, _, err := i386.Encode(i386.Baseline(), inst)
+		b, _, err := i386.Encode(i386.DefaultFeatures(), inst)
 		if err != nil {
 			return fmt.Errorf("%q: %w", line, err)
 		}

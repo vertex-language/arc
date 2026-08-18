@@ -42,7 +42,7 @@ func fmtOne(path string, write bool, dialectFlag string) error {
 		in = i386.NASM
 	}
 
-	unit, err := i386.ParseFile(path, string(src), in)
+	unit, err := i386.ParseFile(path, src, in)
 	if err != nil {
 		return err
 	}
@@ -60,8 +60,8 @@ func fmtOne(path string, write bool, dialectFlag string) error {
 	}
 
 	if write {
-		return os.WriteFile(path, []byte(text), 0o644)
+		return os.WriteFile(path, text, 0o644)
 	}
-	_, err = fmt.Print(text)
+	_, err = fmt.Print(string(text))
 	return err
 }
