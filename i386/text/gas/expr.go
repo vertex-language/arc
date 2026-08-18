@@ -171,7 +171,11 @@ func (p *parser) primary() text.Expr {
 func (p *parser) absolute(what string) (int64, bool) {
 	pos := p.tok.pos
 	x := p.expr()
-	v, err := text.Eval(x, p.unit.Equates())
+	eq := p.unit.Equates()
+	v, err := text.Eval(x, func(name string) (int64, bool) {
+		c, ok := eq[name]
+		return c, ok
+	})
 	if err != nil {
 		p.errs.Add(err)
 		return 0, false
