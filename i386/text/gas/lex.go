@@ -213,9 +213,22 @@ func (l *lexer) next() token {
 // Whether it is a trailing comment or a whole-line one depends on whether
 // anything preceded it on the line, which the column tells us: a comment
 // starting in column 1 after only whitespace is its own line.
+//
+// Exactly one space immediately after the '#' is consumed as part of the
+// introducer, not the body, because the printer always writes that one
+// space back itself ("#" + " " + body). Without stripping it here, "# foo"
+// round-trips to "#  foo" — one space from the source, one from the
+// printer — and each further fmt pass adds another, so arc fmt --check
+// would never converge. A comment with no space after '#', or with more
+// than one, keeps whatever it has beyond the first: "#foo" stays "#foo" and
+// "#  foo" keeps its second space, since only the one space the printer
+// itself supplies is the printer's to own.
 func (l *lexer) lineComment() {
 	own := l.onlyWhitespaceBefore()
 	l.advance() // '#'
+	if l.peekByte() == ' ' {
+		l.advance()
+	}
 	start := l.pos
 	for l.pos < len(l.src) && l.peekByte() != '\n' {
 		l.advance()
@@ -532,8 +545,7 @@ func (l *lexer) punct(p text.Pos) token {
 // produces that token. If '$' started an identifier, "$60" would scan as one
 // ident literally named "$60" instead of a '$' token followed by the number
 // 60, and every $-immediate in the dialect would silently become a bogus
-// memory reference to a symbol named "$60" — exactly the shape of bug that
-// makes an ambiguous-width error surface three lines later than its cause.
+// memory reference to a symbol named "$60".
 func isIdentStart(c byte) bool {
 	return c == '_' || c == '.' ||
 		(c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')

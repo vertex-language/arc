@@ -204,9 +204,19 @@ func (l *lexer) next() token {
 // lineComment consumes ';' to end of line. NASM has no block comment in the
 // mainline grammar, only the preprocessor's, which this package does not
 // implement.
+//
+// Exactly one space immediately after the ';' is consumed as part of the
+// introducer, not the body, because the printer always writes that one space
+// back itself (";" + " " + body). Without stripping it here, "; foo"
+// round-trips to ";  foo" — one space from the source, one from the printer
+// — and each further fmt pass adds another, so arc fmt --check would never
+// converge.
 func (l *lexer) lineComment() {
 	own := l.onlyWhitespaceBefore()
 	l.advance() // ';'
+	if l.peekByte() == ' ' {
+		l.advance()
+	}
 	start := l.pos
 	for l.pos < len(l.src) && l.peekByte() != '\n' {
 		l.advance()
