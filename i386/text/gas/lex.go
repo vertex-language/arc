@@ -524,16 +524,23 @@ func (l *lexer) punct(p text.Pos) token {
 	return token{kind: tPunct, pos: p, str: string(c)}
 }
 
-// Identifier characters. GNU as allows $ and . inside a name, which is why a
-// symbol may be spelled .L.str.1 and why the '.' of a directive is scanned as
-// part of the word rather than as punctuation.
+// Identifier characters. GNU as allows '.' inside a name at the start —
+// which is why a symbol may be spelled .L.str.1 and why the '.' of a
+// directive is scanned as part of the word rather than as punctuation — and
+// allows '$' inside a name too, but never as the first character: '$' as the
+// first byte of a token is the immediate sigil ($60), and only punct()
+// produces that token. If '$' started an identifier, "$60" would scan as one
+// ident literally named "$60" instead of a '$' token followed by the number
+// 60, and every $-immediate in the dialect would silently become a bogus
+// memory reference to a symbol named "$60" — exactly the shape of bug that
+// makes an ambiguous-width error surface three lines later than its cause.
 func isIdentStart(c byte) bool {
-	return c == '_' || c == '.' || c == '$' ||
+	return c == '_' || c == '.' ||
 		(c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
 func isIdentPart(c byte) bool {
-	return isIdentStart(c) || (c >= '0' && c <= '9')
+	return isIdentStart(c) || c == '$' || (c >= '0' && c <= '9')
 }
 
 func isNumPart(c byte) bool {
