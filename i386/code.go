@@ -168,7 +168,7 @@ func (a *Assembler) toValue(x text.Expr) (Operand, error) {
 		return nil, err
 	}
 	if v.IsAbs() {
-		return operand.Imm(v.Const), nil
+		return operand.NewImm(v.Const), nil
 	}
 
 	switch v.Kind() {
@@ -180,7 +180,7 @@ func (a *Assembler) toValue(x text.Expr) (Operand, error) {
 					"i386: %s+%d has no local-label form; a label carries no addend, only a relocation does",
 					name, v.Const)
 			}
-			return operand.Label(name), nil
+			return operand.NewLabel(name), nil
 		}
 		kind, err := a.relocKindFor(mod)
 		if err != nil {
@@ -198,15 +198,15 @@ func (a *Assembler) toValue(x text.Expr) (Operand, error) {
 // which is why GOTOFF and GOTPC exist at all rather than a GOTPCREL the way
 // x86_64 has one.
 var elfModKind = map[text.Modifier]RelocKind{
-	text.ModPLT:      R_386_PLT32,
-	text.ModGOT:       R_386_GOT32,
-	text.ModGOTOFF:    R_386_GOTOFF,
-	text.ModGOTPC:     R_386_GOTPC,
-	text.ModTLSGD:     R_386_TLS_GD,
-	text.ModTLSLDM:    R_386_TLS_LDM,
-	text.ModDTPOFF:    R_386_TLS_LDO_32,
-	text.ModGOTTPOFF:  R_386_TLS_IE,
-	text.ModTPOFF:     R_386_TLS_LE,
+	text.ModPLT:     R_386_PLT32,
+	text.ModGOT:     R_386_GOT32,
+	text.ModGOTOFF:  R_386_GOTOFF,
+	text.ModGOTPC:   R_386_GOTPC,
+	text.ModTLSGD:   R_386_TLS_GD,
+	text.ModTLSLDM:  R_386_TLS_LDM,
+	text.ModDTPOFF:  R_386_TLS_LDO_32,
+	text.ModGOTTPOFF: R_386_TLS_IE,
+	text.ModTPOFF:   R_386_TLS_LE,
 }
 
 func (a *Assembler) relocKindFor(mod text.Modifier) (RelocKind, error) {
