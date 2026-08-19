@@ -499,8 +499,8 @@ type fixup struct {
 
 // ---- data --------------------------------------------------------------
 
-// Bytes appends raw bytes.
-func (s *Section) Bytes(b []byte) {
+// WriteBytes appends raw bytes.
+func (s *Section) WriteBytes(b []byte) {
 	if !s.writable(len(b)) {
 		return
 	}

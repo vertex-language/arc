@@ -152,6 +152,12 @@ type config struct {
 	// meaningless anywhere else, and SetBaseAddress refuses to set it on a
 	// platform that has a header to put it in.
 	base uint64
+
+	// macho options
+	machoBuild    bool
+	machoPlatform MachOPlatform
+	machoMajor    uint8
+	machoMinor    uint8
 }
 
 // Option is a setting read at New.

@@ -10,8 +10,11 @@
 package x86_64
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/vertex-language/arc/x86_64/encode"
+	"github.com/vertex-language/arc/x86_64/isa"
 	"github.com/vertex-language/arc/x86_64/text"
 	"github.com/vertex-language/arc/x86_64/text/gas"
 	"github.com/vertex-language/arc/x86_64/text/nasm"
@@ -147,11 +150,11 @@ func ResolveUnit(u *Unit, f FeatureSet) (*Resolved, error) {
 		if err != nil {
 			return nil, atPos(i.Position, f, err)
 		}
-		args, err := encodeArgs(ops)
+		args, err := encode.Args(ops...)
 		if err != nil {
 			return nil, atPos(i.Position, f, err)
 		}
-		form, err := resolveArgs(f, i.Mnemonic, args)
+		form, err := isa.Resolve(f, i.Mnemonic, args...)
 		if err != nil {
 			return nil, atPos(i.Position, f, err)
 		}
@@ -195,7 +198,7 @@ func wrapText(err error) error {
 		return nil
 	}
 	var te *text.Error
-	if asTextError(err, &te) {
+	if errors.As(err, &te) {
 		return &Error{Pos: te.Pos, Err: te.Err, Note: ""}
 	}
 	return &Error{Err: err}
@@ -207,5 +210,5 @@ func dialectError(d Dialect) string {
 	if d == text.DialectNone {
 		return "no dialect named; a unit built programmatically has no origin syntax to print back"
 	}
-	return fmt.Sprintf("no dialect %d", uint8(d))
+	return fmt.Errorf("no dialect %d", uint8(d)).Error()
 }

@@ -7,6 +7,8 @@
 package x86_64
 
 import (
+	"errors"
+
 	"github.com/vertex-language/arc/x86_64/decode"
 	"github.com/vertex-language/arc/x86_64/encode"
 	"github.com/vertex-language/arc/x86_64/isa"
@@ -183,7 +185,7 @@ func Explain(b []byte) (*Explanation, error) {
 // would have enabled the form. It is empty for anything else.
 func gateNote(active FeatureSet, err error) string {
 	var g *isa.GateError
-	if !asGate(err, &g) {
+	if !errors.As(err, &g) {
 		return ""
 	}
 	return "x86_64.WithFeatures(" + GoExpr(active.Plus(g.Need)) + ")"

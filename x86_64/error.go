@@ -8,6 +8,7 @@ import (
 
 	"github.com/vertex-language/arc/x86_64/encode"
 	"github.com/vertex-language/arc/x86_64/isa"
+	"github.com/vertex-language/arc/x86_64/operand"
 	"github.com/vertex-language/arc/x86_64/text"
 )
 
@@ -152,10 +153,10 @@ func category(err error) error {
 
 	// The operand's own rules, checked in operand/ where there is no line.
 	switch {
-	case errors.Is(err, operandErrScale),
-		errors.Is(err, operandErrIndexRSP),
-		errors.Is(err, operandErrRIPWithBase),
-		errors.Is(err, operandErrRIPWithDisp):
+	case errors.Is(err, operand.ErrScale),
+		errors.Is(err, operand.ErrIndexRSP),
+		errors.Is(err, operand.ErrRIPWithBase),
+		errors.Is(err, operand.ErrRIPWithDisp):
 		return ErrForm
 	}
 
