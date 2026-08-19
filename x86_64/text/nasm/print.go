@@ -271,19 +271,19 @@ func printOperand(o *text.Operand, i *text.Inst, size operand.Width) (string, er
 	// NASM and the difference is the operand's kind, which is why the flag
 	// is on the operand and read only by the dialect that spells it.
 
-	if o.Mask != 0 {
-		s += "{" + o.Mask.Name() + "}"
-		if o.Zero {
+	if i.Mask != 0 {
+		s += "{" + i.Mask.Name() + "}"
+		if i.Zero {
 			s += "{z}"
 		}
 	}
-	if o.Broadcast && i.Form != nil {
+	if i.Broadcast && i.Form != nil {
 		s += "{1to" + strconv.Itoa(broadcastCount(i)) + "}"
 	}
-	if r := o.Round.String(); r != "" {
+	if r := i.Round.String(); r != "" {
 		s += "{" + r + "}"
 	}
-	if o.SAE {
+	if i.SAE {
 		s += "{sae}"
 	}
 	return s, nil
