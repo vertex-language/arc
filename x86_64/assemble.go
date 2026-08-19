@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/vertex-language/arc/x86_64/encode"
+	"github.com/vertex-language/arc/x86_64/isa"
 	"github.com/vertex-language/arc/x86_64/text"
 )
 
@@ -61,7 +62,7 @@ func Assemble(u *Unit, p Platform, f FeatureSet) ([]byte, error) {
 				if err != nil {
 					return nil, atPos(it.Position, f, err)
 				}
-				form, err := Resolve(f, it.Mnemonic, args...)
+				form, err := isa.Resolve(f, it.Mnemonic, args...)
 				if err != nil {
 					return nil, atPos(it.Position, f, err)
 				}
@@ -294,7 +295,7 @@ func EncodeInst(f FeatureSet, inst *TextInst) ([]byte, []Fixup, error) {
 		return nil, nil, atPos(inst.Position, f, err)
 	}
 
-	form, err := Resolve(f, inst.Mnemonic, args...)
+	form, err := isa.Resolve(f, inst.Mnemonic, args...)
 	if err != nil {
 		return nil, nil, atPos(inst.Position, f, err)
 	}
