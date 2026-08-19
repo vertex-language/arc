@@ -122,27 +122,24 @@ func printOperand(o *text.Operand, i *text.Inst) (string, error) {
 		return "", text.Errorf(o.Position, "cannot print operand")
 	}
 
-	if o.Indirect {
-		// The star is not decoration: `jmp *%rax` is an indirect branch and
-		// `jmp %rax` is not an instruction at all.
-		s = "*" + s
-	}
+	// The star is not decoration: `jmp *%rax` is an indirect branch and
+	// `jmp %rax` is not an instruction at all.
 
 	// Decorations follow the operand they qualify. The destination is the
 	// last operand in AT&T order, which is where the mask goes.
-	if o.Mask != 0 {
-		s += "{%" + o.Mask.Name() + "}"
-		if o.Zero {
+	if i.Mask != 0 {
+		s += "{%" + i.Mask.Name() + "}"
+		if i.Zero {
 			s += "{z}"
 		}
 	}
-	if o.Broadcast && i.Form != nil {
+	if i.Broadcast && i.Form != nil {
 		s += "{1to" + strconv.Itoa(broadcastCount(i)) + "}"
 	}
-	if r := o.Round.String(); r != "" {
+	if r := i.Round.String(); r != "" {
 		s += "{" + r + "}"
 	}
-	if o.SAE {
+	if i.SAE {
 		s += "{sae}"
 	}
 	return s, nil

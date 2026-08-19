@@ -4,6 +4,7 @@ package nasm
 import (
 	"strings"
 
+	"github.com/vertex-language/arc/x86_64/operand"
 	"github.com/vertex-language/arc/x86_64/text"
 )
 
@@ -223,7 +224,7 @@ func (p *parser) parsePrimary() (text.Expr, error) {
 			if err != nil {
 				return nil, text.Wrap(p.tok.pos, err)
 			}
-			s.Mod = m
+			s.Reloc = m
 			if err := p.advance(); err != nil {
 				return nil, err
 			}
@@ -244,29 +245,29 @@ func packString(s string) int64 {
 // The special symbols NASM accepts after `wrt`. They are folded to the
 // neutral vocabulary; the R_X86_64_* constants they eventually become are
 // declared at the root, which this package may not import.
-var wrtNames = map[string]text.Modifier{
-	"..plt":      text.ModPLT,
-	"..got":      text.ModGOT,
-	"..gotpcrel": text.ModGOTPCREL,
-	"..gotoff":   text.ModGOTOFF,
-	"..gottpoff": text.ModTPOFF,
-	"..tlsie":    text.ModTPOFF,
-	"..tpoff":    text.ModTPOFF,
-	"..dtpoff":   text.ModDTPOFF,
-	"..tlsld":    text.ModTLSLD,
-	"..tlsgd":    text.ModTLSGD,
-	"..sym":      text.ModSize,
+var wrtNames = map[string]operand.RelocKind{
+	"..plt":      operand.RelocKind(text.ModPLT),
+	"..got":      operand.RelocKind(text.ModGOT),
+	"..gotpcrel": operand.RelocKind(text.ModGOTPCREL),
+	"..gotoff":   operand.RelocKind(text.ModGOTOFF),
+	"..gottpoff": operand.RelocKind(text.ModTPOFF),
+	"..tlsie":    operand.RelocKind(text.ModTPOFF),
+	"..tpoff":    operand.RelocKind(text.ModTPOFF),
+	"..dtpoff":   operand.RelocKind(text.ModDTPOFF),
+	"..tlsld":    operand.RelocKind(text.ModTLSLD),
+	"..tlsgd":    operand.RelocKind(text.ModTLSGD),
+	"..sym":      operand.RelocKind(text.ModSize),
 }
 
-func parseWRT(s string) (text.Modifier, error) {
+func parseWRT(s string) (operand.RelocKind, error) {
 	if m, ok := wrtNames[strings.ToLower(s)]; ok {
 		return m, nil
 	}
-	return text.ModNone, text.Errorf(text.Pos{}, "unknown special symbol %s", s)
+	return operand.RelocNone, text.Errorf(text.Pos{}, "unknown special symbol %s", s)
 }
 
-func wrtName(m text.Modifier) string {
-	switch m {
+func wrtName(m operand.RelocKind) string {
+	switch text.Modifier(m) {
 	case text.ModPLT:
 		return "..plt"
 	case text.ModGOT:
@@ -309,7 +310,7 @@ func printExprAt(e text.Expr, outer int) string {
 			// change what the file means.
 			return "<" + s + ">"
 		}
-		if m := wrtName(x.Mod); m != "" {
+		if m := wrtName(x.Reloc); m != "" {
 			s += " wrt " + m
 		}
 		return s

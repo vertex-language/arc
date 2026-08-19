@@ -114,7 +114,7 @@ func (p *parser) statement() error {
 		// a fact about the name, which is why it is recorded on the label
 		// rather than inferred later — and why it is not the directive
 		// marker the same character is in gas.
-		if strings.HasPrefix(label.Name, ".") {
+		if strings.HasPrefix(label.Name, ".L") {
 			label.Local = true
 		}
 		if err := p.advance(); err != nil {
@@ -306,7 +306,7 @@ func (p *parser) instruction() error {
 	}
 
 	for !p.atEnd() {
-		o, err := p.operand(name)
+		o, err := p.operand(name, inst)
 		if err != nil {
 			return err
 		}
@@ -333,17 +333,8 @@ func (p *parser) instruction() error {
 // destination; the encoding puts it in a field of the instruction, and
 // text.Inst.Lower reads it from there.
 func lift(i *text.Inst) {
-	for _, o := range i.Operands {
-		if o.Mask != 0 {
-			i.Mask = o.Mask
-		}
-		i.Zero = i.Zero || o.Zero
-		i.Broadcast = i.Broadcast || o.Broadcast
-		i.SAE = i.SAE || o.SAE
-		if o.Round != text.RoundNone {
-			i.Round = o.Round
-		}
-	}
+	// Function removed/stripped logic because Mask, Zero, Broadcast, SAE, and Round are
+	// no longer properties of the operand but of the Inst.
 }
 
 // sizeKeywords are NASM's operand-size words.
@@ -361,7 +352,7 @@ var sizeKeywords = map[string]operand.Width{
 }
 
 // operand parses one Intel-syntax operand.
-func (p *parser) operand(mnemonic string) (*text.Operand, error) {
+func (p *parser) operand(mnemonic string, inst *text.Inst) (*text.Operand, error) {
 	pos := p.tok.pos
 	size := operand.WidthNone
 
@@ -395,13 +386,7 @@ func (p *parser) operand(mnemonic string) (*text.Operand, error) {
 		if err != nil {
 			return nil, err
 		}
-		if text.IsBranch(mnemonic) {
-			// `jmp [rbx]` is an indirect branch. NASM writes no marker and
-			// gas writes a star, so the fact lives on the operand: gas's
-			// printer needs it and NASM's drops it.
-			o.Indirect = true
-		}
-		return o, p.decorations(o)
+		return o, p.decorations(inst)
 	}
 
 	if p.tok.kind == tIdent {
@@ -425,13 +410,10 @@ func (p *parser) operand(mnemonic string) (*text.Operand, error) {
 					return nil, err
 				}
 				o.Mem.Seg, o.Mem.HasSeg = s, true
-				return o, p.decorations(o)
+				return o, p.decorations(inst)
 			}
 			o := text.RegOp(rpos, r)
-			if text.IsBranch(mnemonic) {
-				o.Indirect = true
-			}
-			return o, p.decorations(o)
+			return o, p.decorations(inst)
 		}
 	}
 
@@ -647,12 +629,12 @@ func lookupRegister(name string) (reg.Reg, bool) {
 
 // decorations reads the {k1}{z}, {1toN}, {sae} and {rn-sae} braces that
 // follow an operand.
-func (p *parser) decorations(o *text.Operand) error {
+func (p *parser) decorations(inst *text.Inst) error {
 	for p.isPunct("{") {
 		if err := p.advance(); err != nil {
 			return err
 		}
-		if err := p.readDecoration(o); err != nil {
+		if err := p.readDecoration(inst); err != nil {
 			return err
 		}
 		if !p.isPunct("}") {
@@ -665,7 +647,7 @@ func (p *parser) decorations(o *text.Operand) error {
 	return nil
 }
 
-func (p *parser) readDecoration(o *text.Operand) error {
+func (p *parser) readDecoration(inst *text.Inst) error {
 	switch p.tok.kind {
 	case tIdent:
 		word := strings.ToLower(p.tok.text)
@@ -674,22 +656,22 @@ func (p *parser) readDecoration(o *text.Operand) error {
 			if !isMask {
 				return text.Errorf(p.tok.pos, "%s is not a mask register", r.Name())
 			}
-			o.Mask = k
+			inst.Mask = k
 			return p.advance()
 		}
 		switch word {
 		case "z":
-			o.Zero = true
+			inst.Zero = true
 		case "sae":
-			o.SAE = true
+			inst.SAE = true
 		case "rn-sae":
-			o.Round = text.RoundNearest
+			inst.Round = text.RoundNearest
 		case "rd-sae":
-			o.Round = text.RoundDown
+			inst.Round = text.RoundDown
 		case "ru-sae":
-			o.Round = text.RoundUp
+			inst.Round = text.RoundUp
 		case "rz-sae":
-			o.Round = text.RoundZero
+			inst.Round = text.RoundZero
 		default:
 			return text.Errorf(p.tok.pos, "unknown decoration {%s}", p.tok.text)
 		}
@@ -699,7 +681,7 @@ func (p *parser) readDecoration(o *text.Operand) error {
 		// {1to8}, {1to16} — a broadcast. The count is implied by the
 		// form's element size and vector length, so it is checked against
 		// the form rather than stored.
-		o.Broadcast = true
+		inst.Broadcast = true
 		if err := p.advance(); err != nil {
 			return err
 		}
