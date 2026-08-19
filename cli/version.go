@@ -3,8 +3,8 @@ package cli
 
 import "fmt"
 
-const version = "0.0.1-i386"
+const version = "0.0.2"
 
 func printVersion() {
-	fmt.Printf("arc %s (i386 only)\n", version)
+	fmt.Printf("arc %s (%s)\n", version, wiredNames())
 }

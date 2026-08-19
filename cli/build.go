@@ -2,63 +2,51 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/vertex-language/arc/i386"
 )
 
 func runBuild(args []string) error {
-	fs := flag.NewFlagSet("build", flag.ExitOnError)
-	t := fs.String("t", "", "target, e.g. i386-elf")
-	fs.StringVar(t, "target", "", "target, e.g. i386-elf")
-	dialectFlag := fs.String("dialect", "gas", "gas | nasm")
+	fs := newFlagSet("build")
+	targetSpec := targetFlag(fs)
+	dialectSpec := dialectFlag(fs, "input syntax: gas | nasm (default: from the file extension)")
 	out := fs.String("o", "", "output path")
-	fs.StringVar(out, "output", "", "output path")
-	if err := fs.Parse(args); err != nil {
+	fs.StringVar(out, "output", "", "same as -o")
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 
 	inputs := fs.Args()
 	if len(inputs) == 0 {
-		return fmt.Errorf("build: no input files")
+		return usagef("build: no input files")
 	}
 	if len(inputs) > 1 && *out != "" {
-		return fmt.Errorf("build: -o is a usage error with multiple inputs")
+		return usagef("build: -o names one output and there are %d inputs", len(inputs))
 	}
 
-	tgt, err := parseTarget(*t)
+	tgt, d, err := resolve(*targetSpec, *dialectSpec)
 	if err != nil {
 		return err
 	}
-	dialect, err := parseDialect(*dialectFlag)
-	if err != nil {
-		return err
-	}
+	ops := opsFor(tgt.arch)
 
 	for _, in := range inputs {
-		if err := buildOne(in, *out, tgt, dialect); err != nil {
+		if err := buildOne(ops, in, *out, tgt, d); err != nil {
 			return fmt.Errorf("%s: %w", in, err)
 		}
 	}
 	return nil
 }
 
-func buildOne(path, out string, tgt target, dialect i386.Dialect) error {
+func buildOne(ops archOps, path, out string, tgt target, d dialect) error {
 	src, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	unit, err := i386.ParseFile(path, src, dialect)
-	if err != nil {
-		return err
-	}
-
-	b, err := i386.Assemble(unit, tgt.platform, i386.DefaultFeatures())
+	b, err := ops.build(path, src, tgt.platform, d.or(dialectOfExt(path)))
 	if err != nil {
 		return err
 	}
@@ -69,11 +57,10 @@ func buildOne(path, out string, tgt target, dialect i386.Dialect) error {
 	return os.WriteFile(out, b, 0o644)
 }
 
-func defaultOutput(path string, p i386.Platform) string {
-	ext := ".o"
-	if p == i386.COFF {
-		ext = ".obj"
-	}
+// defaultOutput is the input's base name with the format's extension, in
+// the working directory. It follows the input's name and not its directory,
+// which is what every assembler does and what a Makefile expects.
+func defaultOutput(path, platform string) string {
 	base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-	return base + ext
+	return base + objectExt(platform)
 }

@@ -1,44 +1,37 @@
 // cli/enc.go
 package cli
 
-import (
-	"flag"
-	"fmt"
-	"strings"
-
-	"github.com/vertex-language/arc/i386"
-)
+import "fmt"
 
 func runEnc(args []string) error {
-	fs := flag.NewFlagSet("enc", flag.ExitOnError)
-	dialectFlag := fs.String("dialect", "gas", "gas | nasm")
-	if err := fs.Parse(args); err != nil {
+	fs := newFlagSet("enc")
+	targetSpec := targetFlag(fs)
+	dialectSpec := dialectFlag(fs, "input syntax: gas | nasm")
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 
-	dialect, err := parseDialect(*dialectFlag)
+	lines := fs.Args()
+	if len(lines) == 0 {
+		return usagef("enc: no instruction given")
+	}
+
+	tgt, d, err := resolve(*targetSpec, *dialectSpec)
 	if err != nil {
 		return err
 	}
+	ops := opsFor(tgt.arch)
 
-	for _, line := range fs.Args() {
-		inst, err := i386.ParseInst(line, dialect)
-		if err != nil {
-			return fmt.Errorf("%q: %w", line, err)
-		}
-		b, _, err := i386.Encode(i386.DefaultFeatures(), inst)
+	// There is no file here to take a dialect from, so an unnamed one is
+	// gas rather than an error.
+	d = d.or(dialectGAS)
+
+	for _, line := range lines {
+		b, err := ops.encode(line, d)
 		if err != nil {
 			return fmt.Errorf("%q: %w", line, err)
 		}
 		fmt.Println(hexBytes(b))
 	}
 	return nil
-}
-
-func hexBytes(b []byte) string {
-	parts := make([]string, len(b))
-	for i, c := range b {
-		parts[i] = fmt.Sprintf("%02x", c)
-	}
-	return strings.Join(parts, " ")
 }

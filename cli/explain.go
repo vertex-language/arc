@@ -2,30 +2,34 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
-
-	"github.com/vertex-language/arc/i386"
+	"strings"
 )
 
 func runExplain(args []string) error {
-	fs := flag.NewFlagSet("explain", flag.ExitOnError)
-	if err := fs.Parse(args); err != nil {
+	fs := newFlagSet("explain")
+	targetSpec := targetFlag(fs)
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
-	if fs.NArg() != 1 {
-		return fmt.Errorf("explain: expected one hex argument")
+	if fs.NArg() == 0 {
+		return usagef("explain: no bytes given")
 	}
 
-	b, err := decodeHex(fs.Arg(0))
+	tgt, _, err := resolve(*targetSpec, "")
 	if err != nil {
 		return err
 	}
 
-	fields, err := i386.Explain(b)
+	b, err := decodeHex(strings.Join(fs.Args(), " "))
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%+v\n", fields)
+
+	out, err := opsFor(tgt.arch).explain(b)
+	if err != nil {
+		return err
+	}
+	fmt.Println(out)
 	return nil
 }

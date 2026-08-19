@@ -2,43 +2,40 @@
 package cli
 
 import (
-	"encoding/hex"
-	"flag"
 	"fmt"
 	"strings"
-
-	"github.com/vertex-language/arc/i386"
 )
 
 func runDis(args []string) error {
-	fs := flag.NewFlagSet("dis", flag.ExitOnError)
-	if err := fs.Parse(args); err != nil {
+	fs := newFlagSet("dis")
+	targetSpec := targetFlag(fs)
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
-
-	if fs.NArg() != 1 {
-		return fmt.Errorf("dis: expected one hex argument")
+	if fs.NArg() == 0 {
+		return usagef("dis: no bytes given")
 	}
 
-	b, err := decodeHex(fs.Arg(0))
+	tgt, _, err := resolve(*targetSpec, "")
 	if err != nil {
 		return err
 	}
 
-	inst, err := i386.Decode(b)
+	// The arguments are joined rather than taken one at a time, so both
+	// `arc dis 48c7c03c000000` and `arc dis 48 c7 c0 3c 00 00 00` name the
+	// same seven bytes — the second is what a hex dump pastes as.
+	b, err := decodeHex(strings.Join(fs.Args(), " "))
 	if err != nil {
 		return err
 	}
 
-	// TODO: render inst through the dialect printer once decode.Inst's shape
-	// is known here — that needs a DecodedInst -> text.Inst step this
-	// package can't write without seeing decode/. Until then, print the
-	// decoded struct directly, the same way arc explain does.
-	fmt.Printf("%+v\n", inst)
+	// TODO: render through the dialect printer once there is a
+	// decode.Inst → text.Inst step to hand PrintInst. That step is the arch
+	// package's; this one cannot import decode/ to write it.
+	out, err := opsFor(tgt.arch).decode(b)
+	if err != nil {
+		return err
+	}
+	fmt.Println(out)
 	return nil
-}
-
-func decodeHex(s string) ([]byte, error) {
-	s = strings.NewReplacer(" ", "", ",", "", "0x", "").Replace(s)
-	return hex.DecodeString(s)
 }

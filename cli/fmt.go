@@ -2,66 +2,62 @@
 package cli
 
 import (
-	"flag"
+	"bytes"
 	"fmt"
 	"os"
-	"strings"
-
-	"github.com/vertex-language/arc/i386"
 )
 
 func runFmt(args []string) error {
-	fs := flag.NewFlagSet("fmt", flag.ExitOnError)
-	write := fs.Bool("w", false, "rewrite in place")
-	dialectFlag := fs.String("dialect", "", "print in this dialect (default: same as input)")
-	if err := fs.Parse(args); err != nil {
+	fs := newFlagSet("fmt")
+	targetSpec := targetFlag(fs)
+	dialectSpec := dialectFlag(fs, "print in this syntax: gas | nasm (default: the input's)")
+	write := fs.Bool("w", false, "rewrite the file in place")
+	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 
 	paths := fs.Args()
 	if len(paths) == 0 {
-		return fmt.Errorf("fmt: no input files")
+		return usagef("fmt: no input files")
 	}
 
+	tgt, out, err := resolve(*targetSpec, *dialectSpec)
+	if err != nil {
+		return err
+	}
+	ops := opsFor(tgt.arch)
+
 	for _, path := range paths {
-		if err := fmtOne(path, *write, *dialectFlag); err != nil {
+		if err := fmtOne(ops, path, *write, out); err != nil {
 			return fmt.Errorf("%s: %w", path, err)
 		}
 	}
 	return nil
 }
 
-func fmtOne(path string, write bool, dialectFlag string) error {
+// fmtOne reads the input's dialect from its extension and prints in
+// whichever one --dialect named, defaulting to the same one.
+func fmtOne(ops archOps, path string, write bool, out dialect) error {
 	src, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	in := i386.GAS
-	if strings.HasSuffix(path, ".asm") {
-		in = i386.NASM
-	}
-
-	unit, err := i386.ParseFile(path, src, in)
+	in := dialectOfExt(path)
+	text, err := ops.format(path, src, in, out.or(in))
 	if err != nil {
 		return err
 	}
 
-	out := in
-	if dialectFlag != "" {
-		if out, err = parseDialect(dialectFlag); err != nil {
-			return err
-		}
-	}
-
-	text, err := i386.Print(unit, out)
-	if err != nil {
+	if !write {
+		_, err = os.Stdout.Write(text)
 		return err
 	}
 
-	if write {
-		return os.WriteFile(path, text, 0o644)
+	// A file that is already formatted is not rewritten. Touching its mtime
+	// would rebuild everything downstream of it for no change in bytes.
+	if bytes.Equal(text, src) {
+		return nil
 	}
-	_, err = fmt.Print(string(text))
-	return err
+	return os.WriteFile(path, text, 0o644)
 }
