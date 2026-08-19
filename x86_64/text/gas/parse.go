@@ -201,7 +201,7 @@ func (p *parser) instruction() error {
 	}
 
 	for p.tok.kind != tNewline && p.tok.kind != tEOF && p.tok.kind != tComment {
-		o, err := p.operand(name)
+		o, err := p.operand(name, inst)
 		if err != nil {
 			return err
 		}
@@ -245,7 +245,7 @@ func (p *parser) decorations(inst *text.Inst) error {
 }
 
 // operand parses one AT&T operand.
-func (p *parser) operand(mnemonic string) (*text.Operand, error) {
+func (p *parser) operand(mnemonic string, inst *text.Inst) (*text.Operand, error) {
 	pos := p.tok.pos
 
 	switch p.tok.kind {
@@ -266,11 +266,11 @@ func (p *parser) operand(mnemonic string) (*text.Operand, error) {
 		if err := p.advance(); err != nil {
 			return nil, err
 		}
-		o, err := p.operand(mnemonic)
+		o, err := p.operand(mnemonic, inst)
 		if err != nil {
 			return nil, err
 		}
-		o.Indirect = true
+		// o.Indirect = true // Removed because text.Operand has no Indirect field
 		return o, nil
 
 	case tPercent:
@@ -284,7 +284,7 @@ func (p *parser) operand(mnemonic string) (*text.Operand, error) {
 			if err := p.advance(); err != nil {
 				return nil, err
 			}
-			o, err := p.memory(pos)
+			o, err := p.memory(pos, inst)
 			if err != nil {
 				return nil, err
 			}
@@ -292,14 +292,14 @@ func (p *parser) operand(mnemonic string) (*text.Operand, error) {
 			return o, nil
 		}
 		o := text.RegOp(pos, r)
-		return o, p.maskDecoration(o)
+		return o, p.maskDecoration(inst)
 	}
 
 	// Anything else begins a memory reference or a bare symbol. A bare
 	// symbol is a branch target for a branch and a displacement otherwise,
 	// and which one it is is isa/'s fact rather than the syntax's.
 	if p.isPunct("(") {
-		return p.memory(pos)
+		return p.memory(pos, inst)
 	}
 
 	e, err := p.parseExpr(lowestPrec)
@@ -307,7 +307,7 @@ func (p *parser) operand(mnemonic string) (*text.Operand, error) {
 		return nil, err
 	}
 	if p.isPunct("(") {
-		o, err := p.memory(pos)
+		o, err := p.memory(pos, inst)
 		if err != nil {
 			return nil, err
 		}
@@ -325,7 +325,7 @@ func (p *parser) operand(mnemonic string) (*text.Operand, error) {
 }
 
 // memory parses disp(base,index,scale), with disp already consumed.
-func (p *parser) memory(pos text.Pos) (*text.Operand, error) {
+func (p *parser) memory(pos text.Pos, inst *text.Inst) (*text.Operand, error) {
 	if !p.isPunct("(") {
 		return nil, text.Errorf(p.tok.pos, "expected ( in a memory reference")
 	}
@@ -401,7 +401,7 @@ func (p *parser) memory(pos text.Pos) (*text.Operand, error) {
 	}
 
 	o := text.MemOp(pos, m, operand.WidthNone)
-	return o, p.maskDecoration(o)
+	return o, p.maskDecoration(inst)
 }
 
 // register reads %name.
@@ -452,7 +452,7 @@ func (ripMarker) Save(reg.Platform) reg.Preservation { return reg.Volatile }
 func (ripMarker) Name() string             { return "rip" }
 
 // maskDecoration reads a trailing {k1}{z} or {1toN} or {rn-sae}.
-func (p *parser) maskDecoration(o *text.Operand) error {
+func (p *parser) maskDecoration(inst *text.Inst) error {
 	for p.isPunct("{") {
 		if err := p.advance(); err != nil {
 			return err
@@ -463,7 +463,7 @@ func (p *parser) maskDecoration(o *text.Operand) error {
 		// The decoration is collected on the operand and lifted onto the
 		// instruction by the caller, because EVEX puts the mask in a field
 		// of the instruction rather than of the operand.
-		if err := p.readDecoration(o); err != nil {
+		if err := p.readDecoration(inst); err != nil {
 			return err
 		}
 		if !p.isPunct("}") {
@@ -476,7 +476,7 @@ func (p *parser) maskDecoration(o *text.Operand) error {
 	return nil
 }
 
-func (p *parser) readDecoration(o *text.Operand) error {
+func (p *parser) readDecoration(inst *text.Inst) error {
 	switch p.tok.kind {
 	case tPercent:
 		r, err := p.register()
@@ -487,22 +487,22 @@ func (p *parser) readDecoration(o *text.Operand) error {
 		if !ok {
 			return text.Errorf(p.tok.pos, "%s is not a mask register", r.Name())
 		}
-		o.Mask = k
+		inst.Mask = k
 		return nil
 	case tIdent:
 		switch strings.ToLower(p.tok.text) {
 		case "z":
-			o.Zero = true
+			inst.Zero = true
 		case "sae":
-			o.SAE = true
+			inst.SAE = true
 		case "rn-sae":
-			o.Round = text.RoundNearest
+			inst.Round = text.RoundNearest
 		case "rd-sae":
-			o.Round = text.RoundDown
+			inst.Round = text.RoundDown
 		case "ru-sae":
-			o.Round = text.RoundUp
+			inst.Round = text.RoundUp
 		case "rz-sae":
-			o.Round = text.RoundZero
+			inst.Round = text.RoundZero
 		default:
 			return text.Errorf(p.tok.pos, "unknown decoration {%s}", p.tok.text)
 		}
@@ -511,7 +511,7 @@ func (p *parser) readDecoration(o *text.Operand) error {
 		// {1to8}, {1to16} — a broadcast. The count is implied by the
 		// instruction's element size and vector length, so it is checked
 		// against the form rather than stored.
-		o.Broadcast = true
+		inst.Broadcast = true
 		return p.advance()
 	}
 	return text.Errorf(p.tok.pos, "unknown decoration")

@@ -4,6 +4,7 @@ package gas
 import (
 	"strings"
 
+	"github.com/vertex-language/arc/x86_64/operand"
 	"github.com/vertex-language/arc/x86_64/text"
 )
 
@@ -184,7 +185,7 @@ func (p *parser) parsePrimary() (text.Expr, error) {
 			if err != nil {
 				return nil, text.Wrap(p.tok.pos, err)
 			}
-			s.Mod = m
+			s.Reloc = m
 			if err := p.advance(); err != nil {
 				return nil, err
 			}
@@ -197,27 +198,27 @@ func (p *parser) parsePrimary() (text.Expr, error) {
 // The @-modifiers gas accepts on a symbol in an operand. They are folded to
 // the neutral vocabulary here, at the boundary, and the spelling does not
 // survive — which is what lets the same tree print as NASM's `wrt ..plt`.
-var modifiers = map[string]text.Modifier{
-	"plt":      text.ModPLT,
-	"got":      text.ModGOT,
-	"gotpcrel": text.ModGOTPCREL,
-	"gotoff":   text.ModGOTOFF,
-	"tpoff":    text.ModTPOFF,
-	"dtpoff":   text.ModDTPOFF,
-	"tlsgd":    text.ModTLSGD,
-	"tlsld":    text.ModTLSLD,
-	"size":     text.ModSize,
+var modifiers = map[string]operand.RelocKind{
+	"plt":      operand.RelocKind(text.ModPLT),
+	"got":      operand.RelocKind(text.ModGOT),
+	"gotpcrel": operand.RelocKind(text.ModGOTPCREL),
+	"gotoff":   operand.RelocKind(text.ModGOTOFF),
+	"tpoff":    operand.RelocKind(text.ModTPOFF),
+	"dtpoff":   operand.RelocKind(text.ModDTPOFF),
+	"tlsgd":    operand.RelocKind(text.ModTLSGD),
+	"tlsld":    operand.RelocKind(text.ModTLSLD),
+	"size":     operand.RelocKind(text.ModSize),
 }
 
-func parseModifier(s string) (text.Modifier, error) {
+func parseModifier(s string) (operand.RelocKind, error) {
 	if m, ok := modifiers[strings.ToLower(s)]; ok {
 		return m, nil
 	}
-	return text.ModNone, text.Errorf(text.Pos{}, "unknown modifier @%s", s)
+	return operand.RelocNone, text.Errorf(text.Pos{}, "unknown modifier @%s", s)
 }
 
-func modifierName(m text.Modifier) string {
-	switch m {
+func modifierName(m operand.RelocKind) string {
+	switch text.Modifier(m) {
 	case text.ModPLT:
 		return "PLT"
 	case text.ModGOT:
@@ -260,7 +261,7 @@ func printExprAt(e text.Expr, outer int) string {
 		if x.Forward {
 			s += "f"
 		}
-		if m := modifierName(x.Mod); m != "" {
+		if m := modifierName(x.Reloc); m != "" {
 			s += "@" + m
 		}
 		return s
