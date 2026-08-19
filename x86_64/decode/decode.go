@@ -154,6 +154,8 @@ type dec struct {
 	data16 bool
 	addr32 bool
 
+	legacyState // embedded to provide legacyMap and legacyPfx
+
 	rex   byte
 	hasRex bool
 
