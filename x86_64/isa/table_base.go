@@ -4,6 +4,8 @@
 // extension. Gated on feature.Base, which every Set contains.
 package isa
 
+import "github.com/vertex-language/arc/x86_64/feature"
+
 // The eight ALU operations share one shape: eight opcodes at a fixed stride,
 // plus the 80/81/83 immediate group at a fixed /digit. Writing the shape once
 // and the differences in a table is the same reasoning as computing feature
@@ -319,7 +321,7 @@ func baseForms() []*Form {
 		L("cmpxchg", 0xb1, S(RM32, ReadWrite, InRM), S(R32, Read, InReg), Imp(EAX, ReadWrite)).m0F().lock(),
 		L("cmpxchg", 0xb1, S(RM64, ReadWrite, InRM), S(R64, Read, InReg), Imp(RAX, ReadWrite)).m0F().w1().lock(),
 		L("cmpxchg16b", 0xc7, S(M128, ReadWrite, InRM),
-			Imp(RAX, ReadWrite), Imp(RDXClass, ReadWrite)).m0F().ext(1).w1().lock().
+			Imp(RAX, ReadWrite), Imp(DX, ReadWrite)).m0F().ext(1).w1().lock().
 			need(feature.CMPXCHG16B),
 
 		L("xadd", 0xc0, S(RM8, ReadWrite, InRM), S(R8, ReadWrite, InReg)).m0F().lock(),
