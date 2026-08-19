@@ -193,13 +193,24 @@ func Translate(name string, src []byte, from, to Dialect, f FeatureSet) ([]byte,
 
 // wrapText attaches this package's error vocabulary to a text/ diagnostic,
 // which already carries a position.
+//
+// A *text.Error's message lives in one of two places: Err, when it wraps a
+// diagnostic from somewhere else, or Msg, when it was built directly by
+// text.Errorf — which is how nearly every parser error in gas/ and nasm/ is
+// built. Copying only Err and dropping Msg is how a real parse failure
+// like "expected an instruction or directive, got '/'" turned into a bare
+// "file:line:col: " with nothing after it: x86_64.Error.Error() only prints
+// e.Err when e.Err is non-nil, and Err was nil.
 func wrapText(err error) error {
 	if err == nil {
 		return nil
 	}
 	var te *text.Error
 	if errors.As(err, &te) {
-		return &Error{Pos: te.Pos, Err: te.Err, Note: ""}
+		if te.Err != nil {
+			return &Error{Pos: te.Pos, Err: te.Err}
+		}
+		return &Error{Pos: te.Pos, Err: errors.New(te.Msg)}
 	}
 	return &Error{Err: err}
 }
