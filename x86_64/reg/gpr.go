@@ -1,112 +1,99 @@
-// x86_64/reg/vec.go
+// x86_64/reg/gpr.go
 package reg
 
-// Xmm is a 128-bit vector register. XMM16–XMM31 exist only under EVEX: no
-// REX prefix can reach them, so a legacy-encoded or VEX-encoded form naming
-// one has no encoding at all.
-type Xmm uint8
+// Reg64 is a 64-bit general-purpose register.
+type Reg64 uint8
 
-// Ymm is a 256-bit vector register, the low 256 bits of the matching Zmm.
-type Ymm uint8
+// Reg32 is a 32-bit general-purpose register, the low 32 bits of the matching Reg64.
+// Writing to it zero-extends into the 64-bit parent.
+type Reg32 uint8
 
-// Zmm is a 512-bit vector register.
-type Zmm uint8
+// Reg16 is a 16-bit general-purpose register, the low 16 bits of the matching Reg64.
+type Reg16 uint8
 
-const (
-	XMM0, YMM0, ZMM0    = Xmm(0), Ymm(0), Zmm(0)
-	XMM1, YMM1, ZMM1    = Xmm(1), Ymm(1), Zmm(1)
-	XMM2, YMM2, ZMM2    = Xmm(2), Ymm(2), Zmm(2)
-	XMM3, YMM3, ZMM3    = Xmm(3), Ymm(3), Zmm(3)
-	XMM4, YMM4, ZMM4    = Xmm(4), Ymm(4), Zmm(4)
-	XMM5, YMM5, ZMM5    = Xmm(5), Ymm(5), Zmm(5)
-	XMM6, YMM6, ZMM6    = Xmm(6), Ymm(6), Zmm(6)
-	XMM7, YMM7, ZMM7    = Xmm(7), Ymm(7), Zmm(7)
-	XMM8, YMM8, ZMM8    = Xmm(8), Ymm(8), Zmm(8)
-	XMM9, YMM9, ZMM9    = Xmm(9), Ymm(9), Zmm(9)
-	XMM10, YMM10, ZMM10 = Xmm(10), Ymm(10), Zmm(10)
-	XMM11, YMM11, ZMM11 = Xmm(11), Ymm(11), Zmm(11)
-	XMM12, YMM12, ZMM12 = Xmm(12), Ymm(12), Zmm(12)
-	XMM13, YMM13, ZMM13 = Xmm(13), Ymm(13), Zmm(13)
-	XMM14, YMM14, ZMM14 = Xmm(14), Ymm(14), Zmm(14)
-	XMM15, YMM15, ZMM15 = Xmm(15), Ymm(15), Zmm(15)
-	XMM16, YMM16, ZMM16 = Xmm(16), Ymm(16), Zmm(16)
-	XMM17, YMM17, ZMM17 = Xmm(17), Ymm(17), Zmm(17)
-	XMM18, YMM18, ZMM18 = Xmm(18), Ymm(18), Zmm(18)
-	XMM19, YMM19, ZMM19 = Xmm(19), Ymm(19), Zmm(19)
-	XMM20, YMM20, ZMM20 = Xmm(20), Ymm(20), Zmm(20)
-	XMM21, YMM21, ZMM21 = Xmm(21), Ymm(21), Zmm(21)
-	XMM22, YMM22, ZMM22 = Xmm(22), Ymm(22), Zmm(22)
-	XMM23, YMM23, ZMM23 = Xmm(23), Ymm(23), Zmm(23)
-	XMM24, YMM24, ZMM24 = Xmm(24), Ymm(24), Zmm(24)
-	XMM25, YMM25, ZMM25 = Xmm(25), Ymm(25), Zmm(25)
-	XMM26, YMM26, ZMM26 = Xmm(26), Ymm(26), Zmm(26)
-	XMM27, YMM27, ZMM27 = Xmm(27), Ymm(27), Zmm(27)
-	XMM28, YMM28, ZMM28 = Xmm(28), Ymm(28), Zmm(28)
-	XMM29, YMM29, ZMM29 = Xmm(29), Ymm(29), Zmm(29)
-	XMM30, YMM30, ZMM30 = Xmm(30), Ymm(30), Zmm(30)
-	XMM31, YMM31, ZMM31 = Xmm(31), Ymm(31), Zmm(31)
-)
-
-func (r Xmm) Num() uint8 { return uint8(r) }
-func (r Ymm) Num() uint8 { return uint8(r) }
-func (r Zmm) Num() uint8 { return uint8(r) }
-
-func (Xmm) Bits() int { return 128 }
-func (Ymm) Bits() int { return 256 }
-func (Zmm) Bits() int { return 512 }
-
-func (Xmm) Class() Class { return ClassXmm }
-func (Ymm) Class() Class { return ClassYmm }
-func (Zmm) Class() Class { return ClassZmm }
-
-func (r Xmm) Loc() Loc { return Loc{FileVec, uint8(r), 0, 128} }
-func (r Ymm) Loc() Loc { return Loc{FileVec, uint8(r), 0, 256} }
-func (r Zmm) Loc() Loc { return Loc{FileVec, uint8(r), 0, 512} }
-
-func (r Xmm) Parent() Zmm { return Zmm(r) }
-func (r Ymm) Parent() Zmm { return Zmm(r) }
-
-// EVEXOnly reports whether the register is unreachable without EVEX, i.e.
-// whether its number is 16 or above.
-func (r Xmm) EVEXOnly() bool { return r >= 16 }
-func (r Ymm) EVEXOnly() bool { return r >= 16 }
-
-// K is a 64-bit opmask register. K0 is legal as a source but means "no mask"
-// when used as a writemask; isa/ gates that, not this package.
-type K uint8
+// Reg8 is an 8-bit general-purpose register. The legacy high-byte registers
+// (AH, CH, DH, BH) share encoding numbers 4-7 with the REX-only low-byte
+// registers (SPL, BPL, SIL, DIL), so their Num() alone does not identify them.
+type Reg8 uint8
 
 const (
-	K0 K = iota
-	K1
-	K2
-	K3
-	K4
-	K5
-	K6
-	K7
+	RAX, EAX, AX, AL = Reg64(0), Reg32(0), Reg16(0), Reg8(0)
+	RCX, ECX, CX, CL = Reg64(1), Reg32(1), Reg16(1), Reg8(1)
+	RDX, EDX, DX, DL = Reg64(2), Reg32(2), Reg16(2), Reg8(2)
+	RBX, EBX, BX, BL = Reg64(3), Reg32(3), Reg16(3), Reg8(3)
+	RSP, ESP, SP     = Reg64(4), Reg32(4), Reg16(4)
+	RBP, EBP, BP     = Reg64(5), Reg32(5), Reg16(5)
+	RSI, ESI, SI     = Reg64(6), Reg32(6), Reg16(6)
+	RDI, EDI, DI     = Reg64(7), Reg32(7), Reg16(7)
+
+	R8, R8D, R8W, R8B     = Reg64(8), Reg32(8), Reg16(8), Reg8(8)
+	R9, R9D, R9W, R9B     = Reg64(9), Reg32(9), Reg16(9), Reg8(9)
+	R10, R10D, R10W, R10B = Reg64(10), Reg32(10), Reg16(10), Reg8(10)
+	R11, R11D, R11W, R11B = Reg64(11), Reg32(11), Reg16(11), Reg8(11)
+	R12, R12D, R12W, R12B = Reg64(12), Reg32(12), Reg16(12), Reg8(12)
+	R13, R13D, R13W, R13B = Reg64(13), Reg32(13), Reg16(13), Reg8(13)
+	R14, R14D, R14W, R14B = Reg64(14), Reg32(14), Reg16(14), Reg8(14)
+	R15, R15D, R15W, R15B = Reg64(15), Reg32(15), Reg16(15), Reg8(15)
+
+	// The REX-only low byte registers. They encode as 4-7 but require a REX prefix.
+	SPL = Reg8(4)
+	BPL = Reg8(5)
+	SIL = Reg8(6)
+	DIL = Reg8(7)
+
+	// The legacy high byte registers. They encode as 4-7 but forbid a REX prefix.
+	AH = Reg8(16)
+	CH = Reg8(17)
+	DH = Reg8(18)
+	BH = Reg8(19)
 )
 
-func (r K) Num() uint8  { return uint8(r) }
-func (K) Bits() int     { return 64 }
-func (K) Class() Class  { return ClassK }
-func (r K) Loc() Loc    { return Loc{FileMask, uint8(r), 0, 64} }
+func (r Reg64) Num() uint8 { return uint8(r) }
+func (r Reg32) Num() uint8 { return uint8(r) }
+func (r Reg16) Num() uint8 { return uint8(r) }
 
-// Tmm is an AMX tile register. Its shape is set at run time by LDTILECFG;
-// Bits reports the architectural maximum of 1 KiB.
-type Tmm uint8
+// Num for a Reg8 returns the architectural encoding number.
+func (r Reg8) Num() uint8 {
+	if r >= 16 {
+		return uint8(r) - 12 // AH (16) -> 4, CH (17) -> 5, etc.
+	}
+	return uint8(r)
+}
 
-const (
-	TMM0 Tmm = iota
-	TMM1
-	TMM2
-	TMM3
-	TMM4
-	TMM5
-	TMM6
-	TMM7
-)
+func (Reg64) Bits() int { return 64 }
+func (Reg32) Bits() int { return 32 }
+func (Reg16) Bits() int { return 16 }
+func (Reg8) Bits() int  { return 8 }
 
-func (r Tmm) Num() uint8 { return uint8(r) }
-func (Tmm) Bits() int    { return 8192 }
-func (Tmm) Class() Class { return ClassTmm }
-func (r Tmm) Loc() Loc   { return Loc{FileTile, uint8(r), 0, 8192} }
+func (Reg64) Class() Class { return ClassGP64 }
+func (Reg32) Class() Class { return ClassGP32 }
+func (Reg16) Class() Class { return ClassGP16 }
+func (Reg8) Class() Class  { return ClassGP8 }
+
+func (r Reg64) Loc() Loc { return Loc{FileGPR, uint8(r), 0, 64} }
+func (r Reg32) Loc() Loc { return Loc{FileGPR, uint8(r), 0, 32} }
+func (r Reg16) Loc() Loc { return Loc{FileGPR, uint8(r), 0, 16} }
+
+func (r Reg8) Loc() Loc {
+	if r >= 16 {
+		return Loc{FileGPR, uint8(r) - 16, 8, 16} // AH, CH, DH, BH
+	}
+	return Loc{FileGPR, uint8(r), 0, 8} // AL, CL, etc.
+}
+
+// Parent returns the 64-bit register that contains this register.
+func (r Reg32) Parent() Reg64 { return Reg64(r) }
+func (r Reg16) Parent() Reg64 { return Reg64(r) }
+func (r Reg8) Parent() Reg64 {
+	return Reg64(r.Loc().Index)
+}
+
+// RexRequired reports whether the register requires a REX prefix to be addressable.
+func (r Reg8) RexRequired() bool {
+	return r == SPL || r == BPL || r == SIL || r == DIL || r >= 8 && r <= 15
+}
+
+// RexForbidden reports whether the register cannot be addressed if a REX prefix is present.
+func (r Reg8) RexForbidden() bool {
+	return r >= 16 // AH, CH, DH, BH
+}
