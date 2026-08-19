@@ -117,6 +117,17 @@ type enc struct {
 	rmCls isa.Class
 }
 
+// memOperand returns the memory operand from rmv or moffsv, if present.
+func (e *enc) memOperand() *operand.Mem {
+	if e.moffsv != nil && e.moffsv.kind == kMem {
+		return &e.moffsv.mem
+	}
+	if e.rmv != nil && e.rmv.kind == kMem {
+		return &e.rmv.mem
+	}
+	return nil
+}
+
 // bind walks the form's slots in order and puts each operand in the field
 // the form says it belongs in. This is the only place operand order matters,
 // and it matters exactly once.
@@ -253,8 +264,8 @@ func (e *enc) maskIsZero() bool {
 // This is the whole reason a caller never writes Addend: -4. The
 // displacement of a call ends the instruction, so its tail is zero; the
 // displacement of `mov dword [rip+x], 5` is followed by four bytes of
-// immediate, so its tail is four. The assembler knows because it placed the
-// field, and write_elf.go turns tail into the raw addend the format wants.
+// immediate, so its tail is four and the raw ELF addend is -8. The
+// assembler knows because it placed the field, and write_elf.go turns tail into the raw addend the format wants.
 func (e *enc) close() {
 	for i := range e.fix {
 		f := &e.fix[i]
